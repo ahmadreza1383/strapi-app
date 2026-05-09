@@ -27,7 +27,7 @@ jobs:
 
       - name: Clean previous files
         run: |
-          rm -rf app strapi-app.zip
+          rm -rf app strapi-app-built.zip
 
       - name: Create Strapi app
         run: |
@@ -37,27 +37,46 @@ jobs:
         run: |
           rm -rf app/.git
 
-      - name: Pack Strapi app
+      - name: Install dependencies
+        working-directory: app
         run: |
-          zip -r strapi-app.zip app
+          npm install --no-audit --no-fund --loglevel=error
+
+      - name: Build Strapi app
+        working-directory: app
+        run: |
+          npm run build
+
+      - name: Remove node_modules after build
+        run: |
+          rm -rf app/node_modules
+
+      - name: Pack built Strapi skeleton
+        run: |
+          zip -r strapi-app-built.zip app
 
       - name: Generate release tag
         id: release_tag
         run: |
-          TAG="strapi-$(date +'%Y%m%d-%H%M%S')"
+          TAG="strapi-built-$(date +'%Y%m%d-%H%M%S')"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_tag.outputs.tag }}
-          name: Strapi App ${{ steps.release_tag.outputs.tag }}
+          name: Strapi Built App ${{ steps.release_tag.outputs.tag }}
           body: |
-            Auto-generated Strapi app.
+            Auto-generated built Strapi app.
+
+            Includes:
+            - project skeleton
+            - built admin output
+            - no node_modules
 
             Command:
             npx create-strapi@latest app --quickstart --no-run --skip-cloud --use-npm
 
             Node.js:
             22
-          files: strapi-app.zip
+          files: strapi-app-built.zip
